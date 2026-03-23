@@ -71,7 +71,8 @@ def train_pipeline(n_samples, fraud_rate, latent_dim, ae_epochs,
     )
     if_model.fit(X_train[y_train == 0])
     s_if = -if_model.decision_function(X_test)
-    s_if_n = MinMaxScaler().fit_transform(s_if.reshape(-1, 1)).ravel()
+    if_scaler = MinMaxScaler()
+    s_if_n = if_scaler.fit_transform(s_if.reshape(-1, 1)).ravel()
 
     # ── Autoencoder ──
     device = torch.device("cpu")
@@ -95,7 +96,8 @@ def train_pipeline(n_samples, fraud_rate, latent_dim, ae_epochs,
     with torch.no_grad():
         rec = ae(X_test_t).numpy()
     rec_err   = np.mean((rec - X_test) ** 2, axis=1)
-    rec_err_n = MinMaxScaler().fit_transform(rec_err.reshape(-1, 1)).ravel()
+    ae_scaler = MinMaxScaler()
+    rec_err_n = ae_scaler.fit_transform(rec_err.reshape(-1, 1)).ravel()
 
     # ── Hybrid Fusion ──
     s_comb      = alpha * s_if_n + (1 - alpha) * rec_err_n
@@ -107,6 +109,7 @@ def train_pipeline(n_samples, fraud_rate, latent_dim, ae_epochs,
         "rec_err_n": rec_err_n, "s_comb": s_comb,
         "final_score": final_score,
         "xgb_model": xgb_model, "if_model": if_model, "ae_model": ae,
+        "if_scaler": if_scaler, "ae_scaler": ae_scaler,
         "scaler": scaler, "feat_cols": feat_cols,
         "alpha": alpha, "beta": beta,
         "df": df,

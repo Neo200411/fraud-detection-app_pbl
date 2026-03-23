@@ -296,14 +296,14 @@ def render_live_prediction(R, T, alpha, beta, s_if_n, rec_err_n):
     # Score
     xgb_prob = float(R["xgb_model"].predict_proba(txn_scaled)[0, 1])
     if_raw   = float(-R["if_model"].decision_function(txn_scaled)[0])
-    if_norm  = float(np.clip((if_raw - s_if_n.min()) / (s_if_n.max() - s_if_n.min() + 1e-9), 0, 1))
+    if_norm  = float(np.clip(R["if_scaler"].transform([[if_raw]])[0, 0], 0, 1))
 
     txn_t    = torch.tensor(txn_scaled, dtype=torch.float32)
     R["ae_model"].eval()
     with torch.no_grad():
         rec_txn = R["ae_model"](txn_t).numpy()
     ae_err_raw  = float(np.mean((rec_txn - txn_scaled) ** 2))
-    ae_norm     = float(np.clip((ae_err_raw - rec_err_n.min()) / (rec_err_n.max() - rec_err_n.min() + 1e-9), 0, 1))
+    ae_norm     = float(np.clip(R["ae_scaler"].transform([[ae_err_raw]])[0, 0], 0, 1))
 
     s_comb_txn  = alpha * if_norm + (1 - alpha) * ae_norm
     final_txn   = beta  * xgb_prob + (1 - beta) * s_comb_txn
